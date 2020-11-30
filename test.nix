@@ -1,17 +1,20 @@
 { system ? builtins.currentSystem
-, fast ? false
+, withFast ? true
+, withCross ? false
+, withHeavy ? false
 , nixpkgs ? "nixpkgs"
 }:
 let
   sources = import ./nix/sources.nix;
   pkgs = import ./nix { inherit system nixpkgs; };
+  inherit (pkgs) lib;
   naersk = pkgs.callPackage ./default.nix
     { inherit (pkgs.rustPackages) cargo rustc; };
 
-  # very temporary musl tests, just to make sure 1_41_0 builds on 20.03
-  # (okay, it's actually a wasm test)
-  muslTests =
+  crossTests =
+    rec
     {
+
       wasm_rust_1_41_0 =
         let
           pkgs' = pkgs.appendOverlays
@@ -85,7 +88,7 @@ let
         src = builtins.filterSource (
           p: t:
             let
-              p' = pkgs.lib.removePrefix (toString ./docparse + "/") p;
+              p' = lib.removePrefix (toString ./docparse + "/") p;
             in
               p' == "Cargo.lock" || p' == "Cargo.toml" || p' == "src" || p' == "src/main.rs"
         ) ./docparse;
@@ -211,7 +214,8 @@ let
 
     rustlings = naersk.buildPackage sources.rustlings;
   };
+
 in
-fastTests
-// pkgs.lib.optionalAttrs (! fast) heavyTests
-// pkgs.lib.optionalAttrs (nixpkgs == "nixpkgs-20.03" && pkgs.stdenv.isLinux) muslTests
+  lib.optionalAttrs (withCross) crossTests
+   // lib.optionalAttrs (withFast) fastTests
+   // lib.optionalAttrs (withHeavy) heavyTests

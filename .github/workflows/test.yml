@@ -1,16 +1,40 @@
 name: "test"
-on:
-  push:
-    branches:
-      - 'master'
+
+on: push
 
 jobs:
-  install-nix:
-    runs-on: ubuntu-20.04
+  test:
+    strategy:
+      matrix:
+        # run basic tests on ubuntu with three different nixpkgs checkouts
+        nixpkgs:
+          - nixpkgs
+          - nixpkgs-20.03
+          - nixpkgs-20.09
+        os:
+          - ubuntu-20.04
+
+        include:
+          # enable cross tests in the nixpkgs-20.09 job
+          - nixpkgs: nixpkgs-20.09
+            withCross: true
+          # if this is a master checkout, enable heavy tests in the nixpkgs (master) job
+          - nixpkgs: nixpkgs
+            withHeavy: ${{ github.ref == 'refs/heads/master' }}
+          # additionally run basic tests on macos
+          - nixpkgs: nixpkgs
+            os: macos-10.15
+
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
       - uses: './.github/actions/nix'
         with:
           CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
       - name: "Run tests"
-        run: './script/test'
+        run: './script/test --argstr nixpkgs "$nixpkgs" --arg withFast "${withFast:-true}" --arg withCross "${withCross:-false}" --arg withHeavy "${withHeavy:-false}" '
+        env:
+            nixpkgs: ${{ matrix.nixpkgs }}
+            withFast: ${{ matrix.withFast }}
+            withCross: ${{ matrix.withCross }}
+            withHeavy: ${{ matrix.withHeavy }}
