@@ -11,21 +11,6 @@ echo "Building"
 
 extraArgs=( )
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        "--fast")
-            echo "running only fast tests"
-            extraArgs+=( --arg fast true )
-            shift
-            ;;
-        "--nixpkgs")
-            echo "using $2 as niv entry for nixpkgs"
-            extraArgs+=( --argstr nixpkgs "$2" )
-            shift; shift;
-            ;;
-    esac
-done
-
 if [[ ! $OSTYPE =~ darwin ]]; then
     echo "NOT testing on darwin, enabling sandbox"
     extraArgs+=("--sandbox")
@@ -34,6 +19,7 @@ else
 fi
 
 # Build and create a root
-nix-build ./test.nix --no-link --max-jobs 4 "${extraArgs[@]}"
+echo "running: nix-build ./test.nix --no-link --max-jobs 4 ${extraArgs[@]} $@"
+nix-build ./test.nix --no-link --max-jobs 4 "${extraArgs[@]}" $@
 
 echo "all good"
