@@ -188,7 +188,8 @@ let
       # needed at various steps in the build
       jq
       rsync
-    ] ++ nativeBuildInputs;
+    ] ++ lib.optional compressTarget zstd
+      ++ nativeBuildInputs;
 
     buildInputs = stdenv.lib.optionals stdenv.isDarwin [
       darwin.Security
@@ -282,7 +283,7 @@ let
               --executability $dep/target/ target
           fi
           if [ -f "$dep/target.tar.zst" ]; then
-            ${zstd}/bin/zstd -d "$dep/target.tar.zst" --stdout | tar -x
+            zstd -d "$dep/target.tar.zst" --stdout | tar -x
           fi
 
           if [ -d "$dep/target" ]; then
@@ -386,7 +387,7 @@ let
         mkdir -p $out
         ${if compressTarget then
         ''
-          tar -c target | ${zstd}/bin/zstd -o $out/target.tar.zst
+          tar -c target | zstd -o $out/target.tar.zst
         '' else
         ''
           cp -r target $out
